@@ -85,7 +85,11 @@ int main()
 	}
 
 	// Close  server socket
+#ifdef __linux__
+	close(server_socket);
+#elif _WIN32
 	closesocket(server_socket);
+#endif
 
 	// While loop: accept & echo msg back to client
 	char buf[4096];
@@ -113,9 +117,11 @@ int main()
 	}
 
 	// Close the socket
+#ifdef __linux__
+	close(client_socket);
+#elif _WIN32
 	closesocket(client_socket);
 
-#ifdef _WIN32
 	// Shutdown winsock
 	WSACleanup();
 #endif
