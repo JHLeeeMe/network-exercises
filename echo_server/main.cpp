@@ -1,8 +1,11 @@
 #include <iostream>
-#ifdef __linux__ 
+#ifdef __linux__
+#include <memory.h>
 #include <sys/types.h>
-#include <sys/socket/h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netdb.h>
+#include <unistd.h>
 #elif _WIN32
 #include <WS2tcpip.h>
 #pragma comment (lib, "ws2_32.lib")
@@ -46,19 +49,23 @@ int main()
 	s_sockaddr_info.sin_addr.S_un.S_addr = htonl(INADDR_ANY);
 #endif
 
-	bind(server_socket, (sockaddr*)&s_sockaddr_info, sizeof(s_sockaddr_info));
+	if (bind(server_socket, (sockaddr*)&s_sockaddr_info, sizeof(s_sockaddr_info)) < 0)
+    {
+		std::cerr << "Can't bind a socket! Quitting" << std::endl;
+        return -1;
+    }
 
 	// Tell winsock the socket is for server_socket
 	listen(server_socket, SOMAXCONN);
 
 	// Wait for a connection
 	sockaddr_in c_sockaddr_info;
-	int c_sockaddr_info_len = sizeof(c_sockaddr_info);
-
 #ifdef __linux__
+	socklen_t c_sockaddr_info_len = sizeof(c_sockaddr_info);
 	int client_socket = accept(server_socket, (sockaddr*)&c_sockaddr_info, &c_sockaddr_info_len);
 	//if (client_socket == -1)
 #elif _WIN32
+	int c_sockaddr_info_len = sizeof(c_sockaddr_info);
 	SOCKET client_socket = accept(server_socket, (sockaddr*)&c_sockaddr_info, &c_sockaddr_info_len);
 	//if (client_socket == INVALID_SOCKET)
 #endif
@@ -74,14 +81,19 @@ int main()
 	//ZeroMemory(host, NI_MAXHOST);		// same as memset(host, 0, NI_MAXHOST);
 	//ZeroMemory(service, NI_MAXHOST);
 
-	if (getnameinfo((sockaddr*)&c_sockaddr_info, c_sockaddr_info_len, host, NI_MAXHOST, service, NI_MAXHOST, 0) == 0)
+	if (getnameinfo(
+            (sockaddr*)&c_sockaddr_info, c_sockaddr_info_len,
+            host, NI_MAXHOST,
+            service, NI_MAXHOST, 0
+        ) == 0)
 	{
 		std::cout << host << " connected on port " << service << std::endl;
 	}
 	else
 	{
 		inet_ntop(AF_INET, &c_sockaddr_info.sin_addr, host, NI_MAXHOST);
-		std::cout << host << " connected on port " << ntohs(c_sockaddr_info.sin_port) << std::endl;
+		std::cout << host << " connected on port "
+                  << ntohs(c_sockaddr_info.sin_port) << std::endl;
 	}
 
 	// Close  server socket
@@ -113,7 +125,7 @@ int main()
 		}
 
 		// Echo message back to client
-		send(client_socket, buf, bytes_received + 1, 0);  // +1: nullÆ÷ÇÔ
+		send(client_socket, buf, bytes_received + 1, 0);  // +1: null
 	}
 
 	// Close the socket
@@ -128,3 +140,4 @@ int main()
 
 	return 0;
 }
+
