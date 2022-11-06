@@ -64,29 +64,40 @@ int main()
     socklen_t c_sockaddr_info_len = sizeof(c_sockaddr_info);
     int client_socket =
         accept(server_socket, (sockaddr*)&c_sockaddr_info, &c_sockaddr_info_len);
-    //if (client_socket == -1)
+    if (client_socket == -1)
+    {
+        std::cerr << "Problem with client connecting!";
+        return -1;
+    }
+
+    // Close  server socket
+    close(server_socket);
 #elif _WIN32
     int c_sockaddr_info_len = sizeof(c_sockaddr_info);
     SOCKET client_socket =
         accept(server_socket, (sockaddr*)&c_sockaddr_info, &c_sockaddr_info_len);
-    //if (client_socket == INVALID_SOCKET)
+    if (client_socket == INVALID_SOCKET)
+    {
+        std::cerr << "Problem with client connecting!";
+        return -1;
+    }
+
+    // Close  server socket
+    closesocket(server_socket);
 #endif
-    //{
-    //    //Do something...
-    //}
 
     char host[NI_MAXHOST];      // Client's remote name
-    char service[NI_MAXHOST];   // Service (i.e. port) the client is connect on
+    char service[NI_MAXSERV];   // Service (i.e. port) the client is connect on
 
     memset(host, 0, NI_MAXHOST);
-    memset(service, 0, NI_MAXHOST);
+    memset(service, 0, NI_MAXSERV);
     //ZeroMemory(host, NI_MAXHOST);     // same as memset(host, 0, NI_MAXHOST);
-    //ZeroMemory(service, NI_MAXHOST);
+    //ZeroMemory(service, NI_MAXSERV);
 
     if (getnameinfo(
             (sockaddr*)&c_sockaddr_info, c_sockaddr_info_len,
             host, NI_MAXHOST,
-            service, NI_MAXHOST, 0
+            service, NI_MAXSERV, 0
         ) == 0)
     {
         std::cout << host << " connected on port " << service << std::endl;
@@ -97,13 +108,6 @@ int main()
         std::cout << host << " connected on port "
                   << ntohs(c_sockaddr_info.sin_port) << std::endl;
     }
-
-    // Close  server socket
-#ifdef __linux__
-    close(server_socket);
-#elif _WIN32
-    closesocket(server_socket);
-#endif
 
     // While loop: recv & echo msg back to client
     char buf[4096];
@@ -119,12 +123,13 @@ int main()
             std::cerr << "Error in recv(). Quitting" << std::endl;
             break;
         }
-
-        if (bytes_received == 0)
+        else if (bytes_received == 0)
         {
             std::cout << "Clinet disconnected " << std::endl;
             break;
         }
+
+        std::cout << "Received: " << buf;
 
         // Echo message back to client
         send(client_socket, buf, bytes_received + 1, 0);  // +1: null
