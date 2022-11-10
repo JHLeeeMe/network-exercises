@@ -5,9 +5,12 @@
 
 int main()
 {
-    jhleeeme::net::HttpBase* http_server = new jhleeeme::net::HttpServer();
-    http_server->create_socket();
-    std::cout << http_server->get_sockfd() << std::endl;
+    //jhleeeme::net::HttpBase* http_server = new jhleeeme::net::HttpServer();
+    //http_server->create_socket();
+    //std::cout << http_server->get_sockfd() << std::endl;
+    auto http_server = jhleeeme::net::HttpServer();
+    http_server.create_socket();
+    std::cout << http_server.get_sockfd() << std::endl;
 
     return 0;
 }
