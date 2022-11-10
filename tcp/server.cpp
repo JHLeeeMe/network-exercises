@@ -61,7 +61,8 @@ int main()
      */
     sockaddr_in c_sockaddr_info;
     socklen_t c_sockaddr_info_len = sizeof(c_sockaddr_info);
-    int client_socket = accept(server_socket, (sockaddr*)&s_sockaddr_info, &c_sockaddr_info_len);
+    int client_socket = accept(server_socket, (sockaddr*)&c_sockaddr_info, &c_sockaddr_info_len);
+    //int client_socket = accept(server_socket, (sockaddr*)&s_sockaddr_info, &c_sockaddr_info_len);
     if (client_socket < 0)
     {
         std::cerr << "accpet() failed." << std::endl;
