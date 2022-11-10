@@ -1,13 +1,13 @@
 #pragma once
 
-#include "http_base.h"
+#include "http_interface.h"
 
 namespace jhleeeme
 {
 namespace net
 {
 
-class HttpClient : public HttpBase
+class HttpClient : public IHttp
 {
 public:
     HttpClient();

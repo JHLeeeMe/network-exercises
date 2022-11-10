@@ -10,7 +10,7 @@ namespace net
 {
 
 HttpServer::HttpServer()
-    : HttpBase()
+    : IHttp()
     , _sockfd(-1)
     , _client_sockaddr_len(sizeof(_client_sockaddr))
 {

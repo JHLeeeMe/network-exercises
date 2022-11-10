@@ -10,11 +10,11 @@ namespace jhleeeme
 namespace net
 {
 
-class HttpBase
+class IHttp
 {
 public:
-    HttpBase()=default;
-    virtual ~HttpBase()=default;
+    IHttp()=default;
+    virtual ~IHttp()=default;
 public:
     virtual void        create_socket()=0;
     virtual int         bind()=0;

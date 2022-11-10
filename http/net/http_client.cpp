@@ -9,7 +9,7 @@ namespace net
 {
 
 HttpClient::HttpClient()
-    : HttpBase()
+    : IHttp()
     , _sockfd(-1)
 {
     memset(&_sockaddr, 0x00, sizeof(_sockaddr));
