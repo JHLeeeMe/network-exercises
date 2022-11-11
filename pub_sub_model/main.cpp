@@ -12,13 +12,13 @@ void producer(std::queue<int>* task_queue, std::mutex& mtx, int idx)
 {
     while (true)
     {
-        std::unique_lock<std::mutex> key(mtx);
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+
+        std::lock_guard<std::mutex> lck(mtx);
         if (task_queue->size() < __PRODUCER_SIZE)
         {
             task_queue->push(idx);
         }
-        key.unlock();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
 
@@ -26,15 +26,15 @@ void consumer(std::queue<int>* task_queue, std::mutex& mtx)
 {
     while (true)
     {
-        std::unique_lock<std::mutex> key(mtx);
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+        std::lock_guard<std::mutex> lck(mtx);
         if (!task_queue->empty())
         {
             int task = task_queue->front();
             printf("task: %d, queue size: %ld\n", task, task_queue->size());
             task_queue->pop();
         }
-        key.unlock();
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 }
 
