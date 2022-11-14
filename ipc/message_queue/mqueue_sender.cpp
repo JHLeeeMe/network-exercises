@@ -42,7 +42,7 @@ int main()
     MsgBuf msg;
 
     int cnt = 0;
-    while (true)
+    while (cnt < 10)
     {
         memset(&payload, 0x00, 32);
         strcpy(payload.data, "hello, ipc!");
@@ -63,6 +63,34 @@ int main()
         ++cnt;
         sleep(1);
     }
+
+    struct msqid_ds mqueue_stat;
+    while (true)
+    {
+        if (msgctl(msg_id, IPC_STAT, &mqueue_stat) < 0)
+        {
+            std::cerr << "msgctl(..., IPC_STAT, ...) failed..." << std::endl;
+            exit(1);
+        }
+
+        if (mqueue_stat.msg_qnum == 0)
+        {
+            break;
+        }
+
+        sleep(1);
+    }
+
+    // rm message queue
+    if (msgctl(msg_id, IPC_RMID, NULL) < 0)
+    {
+        std::cerr << "msgctl() failed..." << std::endl;
+        exit(1);
+    }
+
+    std::cout << "-------------" << std::endl;
+    std::cout << "Receiver end!" << std::endl;
+    std::cout << "-------------" << std::endl;
 
     return 0;
 }

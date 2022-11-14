@@ -59,5 +59,9 @@ int main(int argc, char** argv)
         std::cout << msg.payload.data << std::endl;
     }
 
+    std::cout << "-----------" << std::endl;
+    std::cout << "Sender end!" << std::endl;
+    std::cout << "-----------" << std::endl;
+
     return 0;
 }
