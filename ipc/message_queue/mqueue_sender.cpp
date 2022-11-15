@@ -26,9 +26,9 @@ struct MsgBuf
 
 int main()
 {
-    std::cout << "---------------" << std::endl;
-    std::cout << "Receiver start!" << std::endl;
-    std::cout << "---------------" << std::endl;
+    std::cout << "-------------" << std::endl;
+    std::cout << "Sender start!" << std::endl;
+    std::cout << "-------------" << std::endl;
 
     key_t key = ftok("/dev/mqueue/", 65);
     int msg_id = msgget(key, IPC_CREAT | 0666);
@@ -88,9 +88,9 @@ int main()
         exit(1);
     }
 
-    std::cout << "-------------" << std::endl;
-    std::cout << "Receiver end!" << std::endl;
-    std::cout << "-------------" << std::endl;
+    std::cout << "-----------" << std::endl;
+    std::cout << "Sender end!" << std::endl;
+    std::cout << "-----------" << std::endl;
 
     return 0;
 }

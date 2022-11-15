@@ -23,9 +23,9 @@ struct MsgBuf
 
 int main(int argc, char** argv)
 {
-    std::cout << "-------------" << std::endl;
-    std::cout << "Sender start!" << std::endl;
-    std::cout << "-------------" << std::endl;
+    std::cout << "---------------" << std::endl;
+    std::cout << "Receiver start!" << std::endl;
+    std::cout << "---------------" << std::endl;
 
     key_t key = ftok("/dev/mqueue/", 65);
     int msg_id = msgget(key, IPC_CREAT | 0666);
@@ -35,33 +35,21 @@ int main(int argc, char** argv)
         exit(1);
     }
 
-    int msg_type;
-    msg_type = argc == 2 ? 1 : 2;
-
     MsgBuf msg;
-
     while (true)
     {
-        if (msg_type == 1)
-        {
-            std::cout << "msg_type: " << msg_type << std::endl;
-        }
-        else
-        {
-            std::cout << "msg_type: " << msg_type << std::endl;
-        }
-
-        if (msgrcv(msg_id, &msg, sizeof(msg.payload), msg_type, 0) < 0)
+        if (msgrcv(msg_id, &msg, sizeof(msg.payload), 0, 0) < 0)
         {
             std::cerr << "msgrcv() failed..." << std::endl;
             exit(1);
         }
-        std::cout << msg.payload.data << std::endl;
+        std::cout << "msg type: " << msg.msg_type << std::endl
+                  << "msg     : " << msg.payload.data << std::endl;
     }
 
-    std::cout << "-----------" << std::endl;
-    std::cout << "Sender end!" << std::endl;
-    std::cout << "-----------" << std::endl;
+    std::cout << "-------------" << std::endl;
+    std::cout << "Receiver end!" << std::endl;
+    std::cout << "-------------" << std::endl;
 
     return 0;
 }
