@@ -11,12 +11,12 @@ int main()
     int shm_id = shmget(key, __SHM_SIZE, IPC_CREAT | 0644);
 
     // attach
-    char* shared_memory = (char*)shmat(shm_id, (void*)0, 0);
+    void* shm_addr = shmat(shm_id, (void*)0, 0);
 
-    std::cout << "Shared Data: " << shared_memory << std::endl;
+    std::cout << "Shared Data: " << (char*)shm_addr << std::endl;
 
     // detach & destroy
-    shmdt(shared_memory);
+    shmdt(shm_addr);
     shmctl(shm_id, IPC_RMID, NULL);
 
     return 0;

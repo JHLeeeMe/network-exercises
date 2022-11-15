@@ -13,19 +13,19 @@ int main()
     int shm_id = shmget(key, __SHM_SIZE, IPC_CREAT | 0644);
 
     // attach
-    char* shared_memory = (char*)shmat(shm_id, (void*)0, 0);
-    if (shared_memory == (char*)-1)
+    void* shm_addr = shmat(shm_id, (void*)0, 0);
+    if (shm_addr == (void*)-1)
     {
         std::cerr << "shmat() failed..." << std::endl;
         exit(1);
     }
 
     const char* tmp = "Hello, shm!";
-    strncpy(shared_memory, "Hello, shm!", strlen(tmp));
-    std::cout << "Shared Data: " << shared_memory << std::endl;
+    memcpy(shm_addr, tmp, strlen(tmp));
+    std::cout << "Shared Data: " << (char*)shm_addr << std::endl;
 
     // detach
-    shmdt(shared_memory);
+    shmdt(shm_addr);
 
     return 0;
 }
