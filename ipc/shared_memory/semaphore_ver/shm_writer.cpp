@@ -14,7 +14,7 @@ int main()
 {
     int sem_id = jhleeeme::sysv::sem::create_sem(__SEM_KEY, __SEM_NUMS);
     jhleeeme::sysv::sem::init_sem(sem_id);
-    
+
     key_t key = ftok("./bin/", 65);
     int shm_id = shmget(key, __SHM_SIZE, IPC_CREAT | 0644);
 
