@@ -63,5 +63,10 @@ void HttpServer::set_sockaddr(const char* ip, const int port)
     _sockaddr.sin_port = htons(port);
 }
 
+const sockaddr_in& HttpServer::get_client_sockaddr() const
+{
+    return _client_sockaddr;
+}
+
 }
 }
