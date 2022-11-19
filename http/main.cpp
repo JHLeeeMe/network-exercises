@@ -2,13 +2,46 @@
 #include <memory.h>
 #include <unistd.h>
 #include <vector>
+#include <queue>
 #include <thread>
 #include <mutex>
 #include <string>
+#include <fstream>
 
 #include "net/http_interface.h"
 #include "net/http_server.h"
 
+
+void request_handler(int& sockfd, char*&& first_line)
+{
+    std::string default_path = "./templates/main";
+
+    char* method = strtok(first_line, " ");
+    char* query = strtok(NULL, " ");
+    char* version = strtok(NULL, "\r\n");
+
+    if (strcmp(method, "GET") == 0)
+    {
+        const char* path = default_path.append(query).c_str();
+
+        std::string buf = "HTTP/1.1 200 ok\r\n\n";
+        std::ifstream i_stream{path};
+        if (i_stream.is_open())
+        {
+            std::string line;
+            while (std::getline(i_stream, line))
+            {
+                buf += line;
+            }
+            i_stream.close();
+        }
+        send(sockfd, buf.c_str(), buf.size(), 0);
+    }
+    else if (strcmp(method, "POST") == 0)
+    {
+        //post_handler();
+    }
+}
 
 void connection(int&& sockfd, std::mutex& mtx)
 {
@@ -19,10 +52,16 @@ void connection(int&& sockfd, std::mutex& mtx)
     while (true)
     {
         memset(buf, 0x00, 64);
-        if(recv(sockfd, buf, 64, 0) < 64)
+        int retval = recv(sockfd, buf, 64, 0);
+        if(retval < 64)
         {
             msg.append(buf);
             break;
+        }
+        else if (retval < 1)
+        {
+            close(sockfd);
+            return;
         }
         msg.append(buf);
     }
@@ -31,12 +70,7 @@ void connection(int&& sockfd, std::mutex& mtx)
     strcpy(tmp, msg.c_str());
 
     char* first_line = strtok(tmp, "\r\n");
-    char* method = strtok(first_line, " ");
-    char* query = strtok(NULL, " ");
-    char* version = strtok(NULL, "\r\n");
-    printf("%s\n", method);
-    printf("%s\n", query);
-    printf("%s\n", version);
+    request_handler(sockfd, std::move(first_line));
 
     close(sockfd);
 }
@@ -46,8 +80,7 @@ int main()
     const char* localhost = "127.0.0.1";
     const int   port      = 7777;
 
-    std::vector<std::thread> conn_threads;
-    conn_threads.reserve(10);
+    std::queue<std::thread> conn_threads;
     std::mutex mtx;
 
     auto http_server = jhleeeme::net::HttpServer();
@@ -62,7 +95,7 @@ int main()
         sockaddr_in client_sockaddr = http_server.get_client_sockaddr();
         printf("Connection request: %s:%d\n",
                inet_ntoa(client_sockaddr.sin_addr), ntohs(client_sockaddr.sin_port));
-        conn_threads.push_back(
+        conn_threads.push(
             std::thread(connection, std::move(client_socket), std::ref(mtx))
         );
     }
