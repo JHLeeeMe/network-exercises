@@ -12,9 +12,41 @@
 #include "net/http_server.h"
 
 
-void request_handler(int& sockfd, char*&& first_line)
+void set_response(std::string* buf, char*&& query)
 {
     std::string default_path = "./templates/main";
+    const char* path = default_path.append(query).c_str();
+
+    if (strcmp(query, "/") == 0)
+    {
+        const char* path = default_path.append("/index.html").c_str();
+    }
+
+    std::ifstream i_stream{path};
+    if (i_stream.is_open())
+    {
+        std::string line;
+        while (std::getline(i_stream, line))
+        {
+            *buf += line;
+        }
+    }
+    else
+    {
+        i_stream.close();
+        std::ifstream i_stream{"./templates/main/404.html"};
+        std::string line;
+        while (std::getline(i_stream, line))
+        {
+            *buf += line;
+        }
+    }
+    i_stream.close();
+}
+
+void request_handler(int& sockfd, char*&& first_line)
+{
+    std::string buf = "HTTP/1.1 200 ok\r\n\n";
 
     char* method = strtok(first_line, " ");
     char* query = strtok(NULL, " ");
@@ -22,25 +54,13 @@ void request_handler(int& sockfd, char*&& first_line)
 
     if (strcmp(method, "GET") == 0)
     {
-        const char* path = default_path.append(query).c_str();
-
-        std::string buf = "HTTP/1.1 200 ok\r\n\n";
-        std::ifstream i_stream{path};
-        if (i_stream.is_open())
-        {
-            std::string line;
-            while (std::getline(i_stream, line))
-            {
-                buf += line;
-            }
-            i_stream.close();
-        }
-        send(sockfd, buf.c_str(), buf.size(), 0);
+        set_response(&buf, std::move(query));
     }
     else if (strcmp(method, "POST") == 0)
     {
         //post_handler();
     }
+    send(sockfd, buf.c_str(), buf.size(), 0);
 }
 
 void connection(int&& sockfd, std::mutex& mtx)
@@ -98,6 +118,7 @@ int main()
         conn_threads.push(
             std::thread(connection, std::move(client_socket), std::ref(mtx))
         );
+        printf("thread 수: %ld", conn_threads.size());
     }
 
     std::cout << "Server end." << std::endl;
