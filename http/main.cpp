@@ -21,14 +21,15 @@ std::queue<int>         conn_requests;
 std::mutex              mtx;
 std::condition_variable cond_var;
 
-void set_response(std::string* buf, char*&& query)
+
+void set_response(std::string* buf, const char* query)
 {
     std::string default_path = "./templates/main";
     const char* path = default_path.append(query).c_str();
 
     if (strcmp(query, "/") == 0)
     {
-        const char* path = default_path.append("/index.html").c_str();
+        path = default_path.append("/index.html").c_str();
     }
 
     std::ifstream i_stream{path};
@@ -53,21 +54,34 @@ void set_response(std::string* buf, char*&& query)
     i_stream.close();
 }
 
-void request_handler(int& sockfd, char*&& first_line)
+void request_handler(int& sockfd, std::string&& msg)
 {
-    std::string buf = "HTTP/1.1 200 ok\r\n\n";
+    char tmp[msg.length()];
+    memset(tmp, 0x00, sizeof(tmp));
+    strcpy(tmp, msg.c_str());
 
-    char* method = strtok(first_line, " ");
-    char* query = strtok(NULL, " ");
-    char* version = strtok(NULL, "\r\n");
+    char* first_line = strtok(tmp, "\r\n");
+    const char* method = strtok(first_line, " ");
+    const char* query = strtok(NULL, " ");
+    const char* version = strtok(NULL, "\r\n");
+
+    std::string buf = "HTTP/1.1 200 ok\r\n\n";
 
     if (strcmp(method, "GET") == 0)
     {
-        set_response(&buf, std::move(query));
+        set_response(&buf, query);
     }
     else if (strcmp(method, "POST") == 0)
     {
-        //post_handler();
+        size_t idx = msg.rfind('\n');
+        std::string body = msg.substr(idx + 1, msg.size() - 1);
+        std::string name = body.substr(body.find('=') + 1, body.find('&') - body.find('=') - 1);
+        std::string snumber = body.substr(body.rfind('=') + 1);
+        buf += "<!DOCTYPE html><html><header><title>sample</title></header><body><h1>Hello, ";
+        buf += name;
+        buf += "!</h1><br>student number: ";
+        buf += snumber;
+        buf += "</body></html>";
     }
     send(sockfd, buf.c_str(), buf.size(), 0);
 }
@@ -106,12 +120,7 @@ first:
             }
             msg.append(buf);
         }
-        char tmp[msg.length()];
-        memset(tmp, 0x00, sizeof(tmp));
-        strcpy(tmp, msg.c_str());
-
-        char* first_line = strtok(tmp, "\r\n");
-        request_handler(sockfd, std::move(first_line));
+        request_handler(sockfd, std::move(msg));
 
         close(sockfd);
     }
