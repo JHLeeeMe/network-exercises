@@ -366,3 +366,5 @@ FodyWeavers.xsd
 /bin
 .vscode
 *.o
+*.orig
+*.bak
