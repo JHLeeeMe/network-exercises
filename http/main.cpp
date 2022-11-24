@@ -21,69 +21,53 @@ std::queue<int>         conn_requests;
 std::mutex              mtx;
 std::condition_variable cond_var;
 
+void response_get(std::string*, const char*);
+void response_post(std::string*, std::string&);
+void request_handler(int&, std::string&&);
+void worker();
 
-void set_response(std::string* buf, const char* query)
+int main()
 {
-    std::string default_path = "./templates/main";
-    const char* path = default_path.append(query).c_str();
+    const char* ip   = "127.0.0.1";
+    const int   port = 7777;
 
-    if (strcmp(query, "/") == 0)
+    auto http_server = jhleeeme::net::HttpServer();
+    http_server.create_socket();
+    http_server.set_sockaddr(ip, port);
+    http_server.bind();
+    http_server.listen();
+
+    std::vector<std::thread> workers;
+    for (int i = 0; i < __WORKER_SIZE; i++)
     {
-        path = default_path.append("/index.html").c_str();
+        workers.push_back(std::thread(worker));
     }
 
-    std::ifstream i_stream{path};
-    if (i_stream.is_open())
+    while (true)
     {
-        std::string line;
-        while (std::getline(i_stream, line))
+        int client_socket = http_server.accept();
+        sockaddr_in client_sockaddr = http_server.get_client_sockaddr();
+        printf("Connection request: %s:%d\n",
+               inet_ntoa(client_sockaddr.sin_addr), ntohs(client_sockaddr.sin_port));
+
+        std::lock_guard<std::mutex> lock(mtx);
+        if (conn_requests_size < __CONN_REQUESTS_LIMITS)
         {
-            *buf += line;
+            conn_requests.push(std::move(client_socket));
+            conn_requests_size++;
+            cond_var.notify_one();
+        }
+        else
+        {
+            const char* resp = "Connection 대기열 꽉참!";
+            send(client_socket, resp, strlen(resp), 0);
+            close(client_socket);
         }
     }
-    else
-    {
-        i_stream.close();
-        std::ifstream i_stream{"./templates/main/404.html"};
-        std::string line;
-        while (std::getline(i_stream, line))
-        {
-            *buf += line;
-        }
-    }
-    i_stream.close();
-}
 
-void request_handler(int& sockfd, std::string&& msg)
-{
-    char tmp[msg.length()];
-    memset(tmp, 0x00, sizeof(tmp));
-    strcpy(tmp, msg.c_str());
+    std::cout << "Server end." << std::endl;
 
-    char* first_line = strtok(tmp, "\r\n");
-    const char* method = strtok(first_line, " ");
-    const char* query = strtok(NULL, " ");
-    const char* version = strtok(NULL, "\r\n");
-
-    std::string buf = "HTTP/1.1 200 ok\r\n\n";
-
-    if (strcmp(method, "GET") == 0)
-    {
-        set_response(&buf, query);
-    }
-    else if (strcmp(method, "POST") == 0)
-    {
-        size_t idx = msg.rfind('\n');
-        std::string body = msg.substr(idx + 1, msg.size() - 1);
-        std::string name = body.substr(body.find('=') + 1, body.find('&') - body.find('=') - 1);
-        std::string snumber = body.substr(body.rfind('=') + 1);
-        buf += "<!DOCTYPE html><html><header><title>sample</title></header><body><h1>Hello, ";
-        buf += name;
-        buf += "!</h1><br>student number: ";
-        buf += snumber;
-        buf += "</body></html>";
-    }
-    send(sockfd, buf.c_str(), buf.size(), 0);
+    return 0;
 }
 
 void worker()
@@ -126,46 +110,70 @@ first:
     }
 }
 
-int main()
+void request_handler(int& sockfd, std::string&& msg)
 {
-    const char* localhost = "127.0.0.1";
-    const int   port      = 7777;
+    char tmp[msg.length()];
+    memset(tmp, 0x00, sizeof(tmp));
+    strcpy(tmp, msg.c_str());
 
-    auto http_server = jhleeeme::net::HttpServer();
-    http_server.create_socket();
-    http_server.set_sockaddr(localhost, port);
-    http_server.bind();
-    http_server.listen();
+    char* first_line = strtok(tmp, "\r\n");
+    const char* method = strtok(first_line, " ");
+    const char* query = strtok(NULL, " ");
+    const char* version = strtok(NULL, "\r\n");
 
-    std::vector<std::thread> workers;
-    for (int i = 0; i < __WORKER_SIZE; i++)
+    std::string buf = "HTTP/1.1 200 ok\r\n\n";
+
+    if (strcmp(method, "GET") == 0)
     {
-        workers.push_back(std::thread(worker));
+        response_get(&buf, query);
+    }
+    else if (strcmp(method, "POST") == 0)
+    {
+        response_post(&buf, msg);
+    }
+    send(sockfd, buf.c_str(), buf.size(), 0);
+}
+
+void response_get(std::string* buf, const char* query)
+{
+    std::string default_path = "./templates/main";
+    const char* path = default_path.append(query).c_str();
+
+    if (strcmp(query, "/") == 0)
+    {
+        path = default_path.append("/index.html").c_str();
     }
 
-    while (true)
+    std::ifstream i_stream{path};
+    if (i_stream.is_open())
     {
-        int client_socket = http_server.accept();
-        sockaddr_in client_sockaddr = http_server.get_client_sockaddr();
-        printf("Connection request: %s:%d\n",
-               inet_ntoa(client_sockaddr.sin_addr), ntohs(client_sockaddr.sin_port));
-
-        std::lock_guard<std::mutex> lock(mtx);
-        if (conn_requests_size < __CONN_REQUESTS_LIMITS)
+        std::string line;
+        while (std::getline(i_stream, line))
         {
-            conn_requests.push(std::move(client_socket));
-            conn_requests_size++;
-            cond_var.notify_one();
-        }
-        else
-        {
-            const char* resp = "Connection 대기열 꽉참!";
-            send(client_socket, resp, strlen(resp), 0);
-            close(client_socket);
+            *buf += line;
         }
     }
+    else
+    {
+        i_stream.close();
+        std::ifstream i_stream{"./templates/main/404.html"};
+        std::string line;
+        while (std::getline(i_stream, line))
+        {
+            *buf += line;
+        }
+    }
+    i_stream.close();
+}
 
-    std::cout << "Server end." << std::endl;
-
-    return 0;
+void response_post(std::string* buf, std::string& msg)
+{
+    size_t idx = msg.rfind('\n');
+    std::string body = msg.substr(idx + 1, msg.size() - 1);
+    std::string name = body.substr(body.find('=') + 1,
+                                   body.find('&') - body.find('=') - 1);
+    std::string snumber = body.substr(body.rfind('=') + 1);
+    *buf += "<!DOCTYPE html><html><header><title>sample</title></header>";
+    *buf += "<body><h1>Hello, " + name + "!</h1><br>";
+    *buf += "student number: " + snumber + "</body></html>";
 }
