@@ -35,5 +35,8 @@ int main()
 
     std::cout << "Client end.." << std::endl;
 
+    close(client_socket);
+
     return 0;
 }
+
